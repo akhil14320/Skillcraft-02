@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Event Logger & Diagnostics</title>
+    <style>
+        /* Modern Material Design Mobile-First Layout */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .app-container {
+            background: #1e293b;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* Diagnostic Icon based on the prompt's theme */
+        .monitor-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+            fill: #38bdf8;
+        }
+
+        .header h1 {
+            font-size: 1.4rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .input-zone {
+            margin-bottom: 20px;
+        }
+
+        .input-zone label {
+            display: block;
+            font-size: 0.85rem;
+            color: #38bdf8;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-zone textarea {
+            width: 100%;
+            height: 100px;
+            padding: 14px;
+            background: #0f172a;
+            border: 2px solid #475569;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            resize: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-zone textarea:focus {
+            border-color: #38bdf8;
+        }
+
+        .log-section {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #334155;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .log-display {
+            height: 150px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+            padding-right: 4px;
+        }
+
+        .log-entry {
+            border-bottom: 1px solid #1e293b;
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .log-entry .timestamp {
+            color: #64748b;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+            background-color: #0ea5e9;
+        }
+
+        /* Custom Scrollbar for a polished mobile app look */
+        .log-display::-webkit-scrollbar {
+            width: 6px;
+        }
+        .log-display::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <svg class="monitor-icon" viewBox="0 0 24 24">
+                <path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-3 2v-2h2v2H5zm0-3V8h2v2H5zm10 7H9v-2h6v2zm1-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/>
+            </svg>
+            <h1>Input Logger Matrix</h1>
+            <p>Diagnostic Event Stream Monitor</p>
+        </div>
+
+        <div class="input-zone">
+            <label for="interactiveInput">Interactive Typing Zone</label>
+            <textarea id="interactiveInput" placeholder="Tap here and begin typing to stream events..."></textarea>
+        </div>
+
+        <div class="log-section">
+            <div class="log-header">
+                <span>Live Event Console</span>
+                <span id="keyCount">Total Logs: 0</span>
+            </div>
+            <div id="logDisplay" class="log-display">
+                <div style="color: #64748b; font-style: italic;">Awaiting input activity...</div>
+            </div>
+        </div>
+
+        <button class="action-btn" id="exportBtn">Export Log Session (.txt)</button>
+    </div>
+
+    <script>
+        const inputArea = document.getElementById('interactiveInput');
+        const logDisplay = document.getElementById('logDisplay');
+        const keyCountLabel = document.getElementById('keyCount');
+        const exportBtn = document.getElementById('exportBtn');
+
+        let rawLogs = [];
+        let totalCount = 0;
+
+        // Capture keydown events in the active text viewport
+        inputArea.addEventListener('keydown', (event) => {
+            // Prevent clearing notification text on first press
+            if (totalCount === 0) {
+                logDisplay.innerHTML = '';
+            }
+
+            const timestamp = new Date().toLocaleTimeString([], { hour12: false });
+            let keyName = event.key;
+
+            // Handle space visibility explicitly
+            if (keyName === ' ') keyName = 'Space';
+
+            // Save log data internally
+            rawLogs.push(`[${timestamp}] Key: ${keyName} | Code: ${event.code}`);
+            totalCount++;
+            keyCountLabel.innerText = `Total Logs: ${totalCount}`;
+
+            // Render log dynamically to UI view
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span>Key: <strong>${keyName}</strong></span>
+                <span class="timestamp">${timestamp}</span>
+            `;
+            
+            logDisplay.appendChild(entry);
+            // Auto-scroll logic similar to terminal viewports
+            logDisplay.scrollTop = logDisplay.scrollHeight;
+        });
+
+        // Export data to a local plain-text file asset
+        exportBtn.addEventListener('click', () => {
+            if (rawLogs.length === 0) {
+                alert("The diagnostic log stream is currently empty.");
+                return;
+            }
+
+            const logContent = rawLogs.join('\n');
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `input_session_log_${Date.now()}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            
+            // Clean up resources
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
